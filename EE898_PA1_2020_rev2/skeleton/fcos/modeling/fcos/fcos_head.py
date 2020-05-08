@@ -25,18 +25,19 @@ class FCOSHead(nn.Module):
     shared convs ->
                     \-> reg convs -> regressions
     """
+
     def __init__(self, cfg, input_shape: List[ShapeSpec]):
         super().__init__()
         # fmt: off
-        self.in_channels       = input_shape[0].channels
-        self.num_classes       = cfg.MODEL.FCOS.NUM_CLASSES
-        self.fpn_strides       = cfg.MODEL.FCOS.FPN_STRIDES
-        self.num_shared_convs  = cfg.MODEL.FCOS.NUM_SHARED_CONVS
+        self.in_channels = input_shape[0].channels
+        self.num_classes = cfg.MODEL.FCOS.NUM_CLASSES
+        self.fpn_strides = cfg.MODEL.FCOS.FPN_STRIDES
+        self.num_shared_convs = cfg.MODEL.FCOS.NUM_SHARED_CONVS
         self.num_stacked_convs = cfg.MODEL.FCOS.NUM_STACKED_CONVS
-        self.prior_prob        = cfg.MODEL.FCOS.PRIOR_PROB
-        self.use_deformable    = cfg.MODEL.FCOS.USE_DEFORMABLE
-        self.norm_layer        = cfg.MODEL.FCOS.NORM
-        self.ctr_on_reg        = cfg.MODEL.FCOS.CTR_ON_REG
+        self.prior_prob = cfg.MODEL.FCOS.PRIOR_PROB
+        self.use_deformable = cfg.MODEL.FCOS.USE_DEFORMABLE
+        self.norm_layer = cfg.MODEL.FCOS.NORM
+        self.ctr_on_reg = cfg.MODEL.FCOS.CTR_ON_REG
         # fmt: on
 
         self._init_layers()
@@ -49,13 +50,17 @@ class FCOSHead(nn.Module):
         activation = nn.ReLU()
 
         """ your code starts here """
-        self.shared_convs = None
-        self.cls_convs = None
-        self.reg_convs = None
-        self.cls_logits = None
-        self.bbox_pred = None
-        self.centerness = None
-        self.scales = None
+        self.shared_convs = nn.Conv2d(self.in_channels, self.in_channels,
+                                      kernel_size=3, stride=1, padding=1)
+        self.cls_convs = nn.Conv2d(self.in_channels, self.in_channels,
+                                   kernel_size=3, stride=1, padding=1)
+        self.reg_convs = nn.Conv2d(self.in_channels, self.in_channels,
+                                   kernel_size=3, stride=1, padding=1)
+        self.cls_logits = nn.Conv2d(self.in_channels, self.num_classes,
+                                    kernel_size=3, stride=1, padding=1)
+        self.bbox_pred = nn.Conv2d(self.in_channels, 4, kernel_size=3, stride=1, padding=1)
+        self.centerness = nn.Conv2d(self.in_channels, 1, kernel_size=3, stride=1, padding=1)
+        self.scales = nn.ModuleList([Scale(init_value=1.0) for _ in range(5)])
         """ your code ends here """
 
     def _init_weights(self):
@@ -64,10 +69,14 @@ class FCOSHead(nn.Module):
             self.cls_logits, self.bbox_pred, self.centerness
         ]:
             # weight initialization with mean=0, std=0.01
-            pass
+            for l in modules.modules():
+                if isinstance(l, nn.Conv2d):
+                    torch.nn.init.normal_(l.weight, std=0.01)
+                    torch.nn.init.constant_(l.bias, 0)
 
         # initialize the bias for classification logits
-        bias_cls = None  # calculate proper value that makes cls_probability with `self.prior_prob`
+        # calculate proper value that makes cls_probability with `self.prior_prob`
+        bias_cls = -math.log((1 - self.prior_prob) / self.prior_prob)
         # In other words, make the initial 'sigmoid' activation of cls_logits as `self.prior_prob`
         # by controlling bias initialization
         nn.init.constant_(self.cls_logits.bias, bias_cls)

@@ -11,7 +11,7 @@ from detectron2.data import MetadataCatalog, build_detection_train_loader
 from detectron2.data.dataset_mapper import DatasetMapper
 from detectron2.engine import DefaultTrainer, default_argument_parser, default_setup, hooks, launch
 from detectron2.evaluation import (
-    CityscapesEvaluator,
+    # CityscapesEvaluator,
     COCOPanopticEvaluator,
     DatasetEvaluators,
     LVISEvaluator,
