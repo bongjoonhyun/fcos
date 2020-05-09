@@ -82,8 +82,25 @@ def get_points_single(featmap_size, stride, device):
     """
 
     """ your code starts here """
-    points = None
+    h = featmap_size[0]
+    w = featmap_size[1]
+
+    shifts_x = torch.arange(
+        0, w * stride, step=stride,
+        dtype=torch.float32, device=device
+    )
+    shifts_y = torch.arange(
+        0, h * stride, step=stride,
+        dtype=torch.float32, device=device
+    )
+    shift_y, shift_x = torch.meshgrid(shifts_y, shifts_x)
+    shift_x = shift_x.reshape(-1)
+    shift_y = shift_y.reshape(-1)
+    points = torch.stack((shift_x, shift_y), dim=1) + stride // 2
+
+    print("points: ", points.shape)
     """ your code ends here """
+
     return points
 
 
@@ -206,9 +223,11 @@ def fcos_target_single_image(
     num_points = points.size(0)
     num_gts = len(gt_instances)
 
+    print(gt_instances)
+
     # get class labels and bboxes from `gt_instances`.
-    gt_labels = NotImplemented  # tensor shape of (num_gts, 1)
-    gt_bboxes = NotImplemented  # tensor shape of (num_gts, 4)
+    gt_labels = gt_instances.gt_classes  # tensor shape of (num_gts, 1)
+    gt_bboxes = gt_instances.gt_boxes  # tensor shape of (num_gts, 4)
 
     if num_gts == 0:
         return (
@@ -218,25 +237,28 @@ def fcos_target_single_image(
 
     # `areas`: should be `torch.Tensor` shape of (num_points, num_gts, 1)
     areas = gt_instances.gt_boxes.area()  # `torch.Tensor` shape of (num_gts, 1)
-    areas = NotImplemented  # hint: use :func:`torch.repeat`.
+    # hint: use :func:`torch.repeat`.
+    areas = areas.repeat(num_points, 1).reshape(num_points, num_gts, 1)
 
     # `regress_ranges`: should be `torch.Tensor` shape of (num_points, num_gts, 2)
-    regress_ranges = NotImplemented  # hint: use :func:`torch.expand`.
+    # hint: use :func:`torch.expand`.
+    regress_ranges = regress_ranges.unsqueeze(1).expand(num_points, num_gts, 2)
 
     # `gt_bboxes`: should be `torch.Tensor` shape of (num_points, num_gts, 4)
-    gt_bboxes = NotImplemented  # hint: use :func:`torch.expand`.
+    # hint: use :func:`torch.expand`.
+    gt_bboxes = gt_bboxes.tensor.expand(num_points, num_gts, 4)
 
     # align each coordinate  component xs, ys in shape as (num_points, num_gts)
     xs, ys = points[:, 0], points[:, 1]
-    xs = NotImplemented  # hint: use :func:`torch.expand`.
-    ys = NotImplemented  # hint: use :func:`torch.expand`.
+    xs = xs.unsqueeze(1).expand(num_points, num_gts)  # hint: use :func:`torch.expand`.
+    ys = ys.unsqueeze(1).expand(num_points, num_gts)  # hint: use :func:`torch.expand`.
 
     # distances to each four side of gt bboxes.
     # The equations correspond to equation(1) from FCOS paper.
-    left = NotImplemented
-    right = NotImplemented
-    top = NotImplemented
-    bottom = NotImplemented
+    left = xs - gt_bboxes[:, :, 0]
+    right = gt_bboxes[:, :, 2] - xs
+    top = ys - gt_bboxes[:, :, 1]
+    bottom = gt_bboxes[:, :, 3] - ys
     bbox_targets = torch.stack((left, top, right, bottom), -1)
 
     if center_sample:
@@ -288,24 +310,25 @@ def fcos_target_single_image(
     else:
         # condition1: a point should be inside a gt bbox
         # hint: all distances (l, t, r, b) > 0. use :func:`torch.min`.
-        inside_gt_bbox_mask = NotImplemented
+        inside_gt_bbox_mask = torch.gt(torch.min(bbox_targets, dim=2).values, 0.)
 
     # condition2: limit the regression range for each location
-    max_regress_distance = NotImplemented   # hint: use :func:`torch.max`.
+    max_regress_distance = torch.max(bbox_targets, dim=2).values  # hint: use :func:`torch.max`.
 
     # The mask whether `max_regress_distance` on every points is bounded
     #   between the side values regress_ranges.
     # See section 3.2 3rd paragraph on FCOS paper.
-    inside_regress_range = (NotImplemented)
+    inside_regress_range = (torch.ge(max_regress_distance, regress_ranges[:, :, 0])
+                            & torch.le(max_regress_distance, regress_ranges[:, :, 1]))
 
     # filter areas that violate condition1 and condition2 above.
-    areas[NotImplemented] = INF   # use `inside_gt_bbox_mask`
-    areas[NotImplemented] = INF   # use `inside_regress_range`
+    areas[inside_gt_bbox_mask == False] = INF   # use `inside_gt_bbox_mask`
+    areas[inside_regress_range == False] = INF   # use `inside_regress_range`
 
     # If there are still more than one objects for a location,
     # we choose the one with minimal area across `num_gts` axis.
     # Hint: use :func:`torch.min`.
-    min_area, min_area_inds = NotImplemented
+    min_area, min_area_inds = torch.min(areas, dim=1)
 
     # ground-truth assignments w.r.t. bbox area indices
     labels = gt_labels[min_area_inds]

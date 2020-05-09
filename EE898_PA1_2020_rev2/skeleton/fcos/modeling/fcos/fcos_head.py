@@ -124,7 +124,7 @@ class FCOSHead(nn.Module):
             cls_logits = self.cls_logits(cls_convs)
             cls_scores.append(cls_logits)
 
-            bbox_pred = self.scales[feat_level] * self.bbox_pred(cls_convs)
+            bbox_pred = self.scales[feat_level](self.bbox_pred(cls_convs))
             bbox_preds.append(bbox_pred)
 
             centerness = self.centerness(reg_convs)
