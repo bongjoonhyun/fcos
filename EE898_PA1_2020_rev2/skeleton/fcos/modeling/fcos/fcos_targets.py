@@ -8,11 +8,11 @@ INF = 100000000
 
 def FCOSTargets(all_level_points, gt_instances, cfg):
     # fmt: off
-    num_classes           = cfg.MODEL.FCOS.NUM_CLASSES
-    fpn_strides           = cfg.MODEL.FCOS.FPN_STRIDES
-    sizes_of_interest     = cfg.MODEL.FCOS.SIZES_OF_INTEREST
-    center_sample         = cfg.MODEL.FCOS.CENTER_SAMPLE
-    center_radius         = cfg.MODEL.FCOS.POS_RADIUS
+    num_classes = cfg.MODEL.FCOS.NUM_CLASSES
+    fpn_strides = cfg.MODEL.FCOS.FPN_STRIDES
+    sizes_of_interest = cfg.MODEL.FCOS.SIZES_OF_INTEREST
+    center_sample = cfg.MODEL.FCOS.CENTER_SAMPLE
+    center_radius = cfg.MODEL.FCOS.POS_RADIUS
     normalize_reg_targets = cfg.MODEL.FCOS.NORMALIZE_REG_TARGETS
     # fmt: on
 
@@ -327,7 +327,10 @@ def compute_centerness_targets(pos_bbox_targets):
     """
 
     """ your code starts here """
-    centerness_targets = pos_bbox_targets.new_zeros(pos_bbox_targets.size(0), 1)
+    left_right = pos_bbox_targets[:, [0, 2]]
+    top_bottom = pos_bbox_targets[:, [1, 3]]
+    centerness_targets = torch.sqrt(left_right.min(dim=-1)[0] / left_right.max(dim=-1)[0]) * \
+        (top_bottom.min(dim=-1)[0] / top_bottom.max(dim=-1)[0])
     """ your code ends here """
 
     return centerness_targets

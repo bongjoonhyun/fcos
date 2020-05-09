@@ -1,9 +1,19 @@
 import math
+import torch
 import torch.nn as nn
 
 from detectron2.layers import Conv2d, DeformConv, ShapeSpec
 from fcos.layers import Scale, normal_init
 from typing import List
+
+
+class Scale(nn.Module):
+    def __init__(self, init_value=1.0):
+        super(Scale, self).__init__()
+        self.scale = nn.Parameter(torch.FloatTensor([init_value]))
+
+    def forward(self, input):
+        return input * self.scale
 
 
 class FCOSHead(nn.Module):
@@ -60,6 +70,7 @@ class FCOSHead(nn.Module):
                                     kernel_size=3, stride=1, padding=1)
         self.bbox_pred = nn.Conv2d(self.in_channels, 4, kernel_size=3, stride=1, padding=1)
         self.centerness = nn.Conv2d(self.in_channels, 1, kernel_size=3, stride=1, padding=1)
+
         self.scales = nn.ModuleList([Scale(init_value=1.0) for _ in range(5)])
         """ your code ends here """
 
@@ -105,6 +116,19 @@ class FCOSHead(nn.Module):
         centernesses = []
         for feat_level, feature in enumerate(features):
             """ your code starts here """
+            shared_convs = self.shared_convs(feature)
 
+            cls_convs = self.cls_convs(shared_convs)
+            reg_convs = self.reg_convs(shared_convs)
+
+            cls_logits = self.cls_logits(cls_convs)
+            cls_scores.append(cls_logits)
+
+            bbox_pred = self.scales[feat_level] * self.bbox_pred(cls_convs)
+            bbox_preds.append(bbox_pred)
+
+            centerness = self.centerness(reg_convs)
+            centernesses.append(centerness)
             """ your code ends here """
+
         return cls_scores, bbox_preds, centernesses
