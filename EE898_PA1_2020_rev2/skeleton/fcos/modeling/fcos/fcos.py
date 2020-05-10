@@ -188,7 +188,14 @@ class FCOS(nn.Module):
             centerness = centerness.permute(1, 2, 0).reshape(-1).sigmoid()
 
             """ Your code starts here """
+            self.score_threshold
+            self.nms_pre_topk
+            self.nms_threshold
 
+            candidate_inds = cls_score > self.nms_threshold
+            nms_pre_topk = candidate_inds.sum(1).clamp(max=self.nms_pre_topk)
+
+            cls_score = cls_score * centerness[:, :, None]
             """ Your code ends here """
 
         bboxes_list = Instances.cat(bboxes_list)

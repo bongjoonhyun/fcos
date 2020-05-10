@@ -97,8 +97,6 @@ def get_points_single(featmap_size, stride, device):
     shift_x = shift_x.reshape(-1)
     shift_y = shift_y.reshape(-1)
     points = torch.stack((shift_x, shift_y), dim=1) + stride // 2
-
-    print("points: ", points.shape)
     """ your code ends here """
 
     return points
@@ -223,8 +221,6 @@ def fcos_target_single_image(
     num_points = points.size(0)
     num_gts = len(gt_instances)
 
-    print(gt_instances)
-
     # get class labels and bboxes from `gt_instances`.
     gt_labels = gt_instances.gt_classes  # tensor shape of (num_gts, 1)
     gt_bboxes = gt_instances.gt_boxes  # tensor shape of (num_gts, 4)
@@ -238,7 +234,7 @@ def fcos_target_single_image(
     # `areas`: should be `torch.Tensor` shape of (num_points, num_gts, 1)
     areas = gt_instances.gt_boxes.area()  # `torch.Tensor` shape of (num_gts, 1)
     # hint: use :func:`torch.repeat`.
-    areas = areas.repeat(num_points, 1).reshape(num_points, num_gts, 1)
+    areas = areas.repeat(num_points, 1)
 
     # `regress_ranges`: should be `torch.Tensor` shape of (num_points, num_gts, 2)
     # hint: use :func:`torch.expand`.
