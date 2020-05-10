@@ -25,9 +25,9 @@ def FCOSLosses(
         losses (dict[str: Tensor]): A dict mapping from loss name to loss value.
     """
     # fmt: off
-    num_classes          = cfg.MODEL.FCOS.NUM_CLASSES
-    focal_loss_alpha     = cfg.MODEL.FCOS.LOSS_ALPHA
-    focal_loss_gamma     = cfg.MODEL.FCOS.LOSS_GAMMA
+    num_classes = cfg.MODEL.FCOS.NUM_CLASSES
+    focal_loss_alpha = cfg.MODEL.FCOS.LOSS_ALPHA
+    focal_loss_gamma = cfg.MODEL.FCOS.LOSS_GAMMA
     # fmt: on
 
     # Collect all logits and regression predictions over feature maps

@@ -125,6 +125,7 @@ class FCOSHead(nn.Module):
             cls_scores.append(cls_logits)
 
             bbox_pred = self.scales[feat_level](self.bbox_pred(cls_convs))
+            bbox_pred = torch.exp(bbox_pred)
             bbox_preds.append(bbox_pred)
 
             centerness = self.centerness(reg_convs)
