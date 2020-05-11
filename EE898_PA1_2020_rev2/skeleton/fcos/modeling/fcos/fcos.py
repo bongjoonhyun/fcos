@@ -188,14 +188,35 @@ class FCOS(nn.Module):
             centerness = centerness.permute(1, 2, 0).reshape(-1).sigmoid()
 
             """ Your code starts here """
-            self.score_threshold
-            self.nms_pre_topk
-            self.nms_threshold
+            nms_pre_topk = scores.clamp(max=self.nms_pre_topk)
+            candidate_inds = nms_pre_topk > self.score_threshold
 
-            candidate_inds = cls_score > self.nms_threshold
-            nms_pre_topk = candidate_inds.sum(1).clamp(max=self.nms_pre_topk)
+            scores = scores * centerness[:, None]
 
-            cls_score = cls_score * centerness[:, :, None]
+            bbox_scores = scores[candidate_inds]
+            bbox_hw = candidate_inds.nonzero()[:, 0]
+            bbox_classes = candidate_inds.nonzero()[:, 1]
+
+            bbox_lrtb = bbox_pred[bbox_hw]
+            bbox_xy = points[bbox_hw]
+
+            if len(bbox_hw) != 0:
+                h, w = image_size
+                detections = torch.stack([
+                    bbox_xy[:, 0] - bbox_lrtb[:, 0],
+                    bbox_xy[:, 1] - bbox_lrtb[:, 1],
+                    bbox_xy[:, 0] + bbox_lrtb[:, 2],
+                    bbox_xy[:, 1] + bbox_lrtb[:, 3],
+                ], dim=1)
+
+                bboxes = Boxes(detections)
+
+                bbox_instances = Instances((int(h), int(w)))
+                bbox_instances.set("pred_boxes", bboxes)
+                bbox_instances.set("scores", bbox_scores)
+                bbox_instances.set("pred_classes", bbox_classes)
+
+                bboxes_list.append(bbox_instances)
             """ Your code ends here """
 
         bboxes_list = Instances.cat(bboxes_list)
