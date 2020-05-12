@@ -49,6 +49,7 @@ RUN pip install matplotlib
 RUN pip install opencv-python
 RUN pip install tqdm
 RUN pip install numpy
+RUN pip install bouding-box
 
 # Install PyTorch
 RUN conda install pytorch torchvision cudatoolkit=10.1 -c pytorch
