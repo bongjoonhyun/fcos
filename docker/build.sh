@@ -4,4 +4,4 @@
 docker build -t bongjoonhyun/fcos_cpu -f cpu.dockerfile .
 
 #docker push bongjoonhyun/fcos_gpu
-#docker push bongjoonhyun/fcos_cpu
+docker push bongjoonhyun/fcos_cpu
